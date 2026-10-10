@@ -1,28 +1,122 @@
+
 services:
-  bitwarden-backup:
-    image: nikhilbadyal/bitwarden-backup
-    container_name: bitwarden-backup
-    env_file:
-      - .env
+
+  redis:
+    image: redis:7-alpine
+    container_name: bitwarden-backup-redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - bitwardenredis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - BitWarden-Net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+
+    container_name: bitwarden-backup-api
+    restart: unless-stopped
+
     environment:
-      - BACKUP_DIR=/tmp/bw_backup  # Override for Docker container
-      - BITWARDENCLI_APPDATA_DIR=/tmp/bw_appdata  # Bitwarden CLI data directory in writable tmpfs
-    pull_policy: always
-    restart: "no"  # Don't restart automatically for backup jobs
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis.:6379/0
+
+      # Bitwarden
+      BW_CLIENTID: ${BW_CLIENTID}
+      BW_CLIENTSECRET: ${BW_CLIENTSECRET}
+      BW_PASSWORD: ${BW_PASSWORD}
+
+      # Encryption and rclone
+      ENCRYPTION_PASSWORD: ${ENCRYPTION_PASSWORD}
+      RCLONE_CONFIG_BASE64: ${RCLONE_CONFIG_BASE64}
+
+      # API authentication
+      API_TOKEN: ${API_TOKEN}
+
+      # Application settings
+      BACKUP_PATH: ${BACKUP_PATH:-bitwarden-backup}
+      API_ALLOW_BACKUP_DECRYPTION: "false"
+      API_ALLOWED_HOSTS: ${API_ALLOWED_HOSTS}
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS}
+
+      # Organization backups
+      EXPORT_ORGANIZATIONS: ${EXPORT_ORGANIZATIONS:-false}
+
     security_opt:
       - no-new-privileges:true
-    tmpfs:
-      - /tmp:noexec,nosuid,size=100m
+
     cap_drop:
       - ALL
+
     cap_add:
       - CHOWN
       - DAC_OVERRIDE
       - SETGID
       - SETUID
-    command: >
-      sh -c "
-        chmod +x /app/*.sh /app/scripts/*.sh &&
-        /app/setup-rclone.sh &&
-        /app/scripts/backup.sh
-      "
+
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:5050/
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    networks:
+      - BitWarden-Net
+
+    command:
+      - uvicorn
+      - api.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5050"
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+
+    container_name: bitwarden-backup-ui
+    restart: unless-stopped
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    networks:
+      - BitWarden-Net
+      - proxy_net
+
+networks:
+  BitWarden-Net:
+    driver: bridge
+    name: BitWarden-Net
+
+  proxy_net:
+    external: true
+    name: proxy_net
+
+volumes:
+  bitwardenredis_data:
+    driver: local
