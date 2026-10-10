@@ -1,6 +1,9 @@
 
 services:
 
+  # ==========================================
+  # REDIS
+  # ==========================================
   redis:
     image: redis:7-alpine
     container_name: bitwarden-backup-redis
@@ -21,38 +24,44 @@ services:
     networks:
       - BitWarden-Net
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
 
+  # ==========================================
+  # BITWARDEN BACKUP API
+  # ==========================================
+  api:
+    image: ghcr.io/olie93/bitwarden-backup-api:latest
     container_name: bitwarden-backup-api
     restart: unless-stopped
 
     environment:
+      # Application
       PYTHONPATH: /app
       REDIS_URL: redis://redis.:6379/0
 
-      # Bitwarden
+      # Bitwarden authentication
       BW_CLIENTID: ${BW_CLIENTID}
       BW_CLIENTSECRET: ${BW_CLIENTSECRET}
       BW_PASSWORD: ${BW_PASSWORD}
 
-      # Encryption and rclone
+      # Backup encryption
       ENCRYPTION_PASSWORD: ${ENCRYPTION_PASSWORD}
+
+      # Remote backup storage
       RCLONE_CONFIG_BASE64: ${RCLONE_CONFIG_BASE64}
 
       # API authentication
       API_TOKEN: ${API_TOKEN}
 
-      # Application settings
-      BACKUP_PATH: ${BACKUP_PATH:-bitwarden-backup}
-      API_ALLOW_BACKUP_DECRYPTION: "false"
+      # Reverse proxy configuration
       API_ALLOWED_HOSTS: ${API_ALLOWED_HOSTS}
       API_CORS_ORIGINS: ${API_CORS_ORIGINS}
 
-      # Organization backups
+      # Backup configuration
+      BACKUP_PATH: ${BACKUP_PATH:-bitwarden-backup}
       EXPORT_ORGANIZATIONS: ${EXPORT_ORGANIZATIONS:-false}
+
+      # Security
+      API_ALLOW_BACKUP_DECRYPTION: "false"
 
     security_opt:
       - no-new-privileges:true
@@ -92,11 +101,12 @@ services:
       - --port
       - "5050"
 
-  ui:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
 
+  # ==========================================
+  # BITWARDEN BACKUP WEB INTERFACE
+  # ==========================================
+  ui:
+    image: ghcr.io/olie93/bitwarden-backup-ui:latest
     container_name: bitwarden-backup-ui
     restart: unless-stopped
 
@@ -108,7 +118,12 @@ services:
       - BitWarden-Net
       - proxy_net
 
+
+# ==========================================
+# NETWORKS
+# ==========================================
 networks:
+
   BitWarden-Net:
     driver: bridge
     name: BitWarden-Net
@@ -117,6 +132,11 @@ networks:
     external: true
     name: proxy_net
 
+
+# ==========================================
+# PERSISTENT STORAGE
+# ==========================================
 volumes:
+
   bitwardenredis_data:
     driver: local
