@@ -110,28 +110,22 @@ services:
     container_name: bitwarden-backup-ui
     restart: unless-stopped
 
+    ports:
+      - "3000:80"
+
     depends_on:
       api:
         condition: service_healthy
 
     networks:
       - BitWarden-Net
-      - proxy_net
-
-
 # ==========================================
 # NETWORKS
 # ==========================================
 networks:
-
   BitWarden-Net:
     driver: bridge
     name: BitWarden-Net
-
-  proxy_net:
-    external: true
-    name: proxy_net
-
 
 # ==========================================
 # PERSISTENT STORAGE
