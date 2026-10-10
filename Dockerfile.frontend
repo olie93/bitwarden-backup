@@ -1,5 +1,7 @@
 
-# Build React frontend
+# ==========================================
+# BUILD REACT FRONTEND
+# ==========================================
 FROM node:24-alpine AS builder
 
 WORKDIR /app/ui
@@ -15,10 +17,13 @@ ENV VITE_API_BASE_URL=/api
 
 RUN npm run build
 
-# Production Nginx web server
+# ==========================================
+# PRODUCTION NGINX WEB SERVER
+# ==========================================
 FROM nginx:alpine
 
-COPY --from=builder /app/ui/dist/ /usr/share/nginx/html/
+# Vite is configured to output to /build
+COPY --from=builder /app/ui/build/ /usr/share/nginx/html/
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
