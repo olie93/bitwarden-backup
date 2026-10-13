@@ -119,6 +119,55 @@ services:
 
     networks:
       - BitWarden-Net
+      
+      
+  scheduler:
+    image: alpine:3.21
+    container_name: bitwarden-backup-scheduler
+    restart: unless-stopped
+
+    environment:
+      TZ: Europe/London
+      API_TOKEN: ${API_TOKEN:?API_TOKEN is required}
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    networks:
+      - BitWarden-Net
+
+    entrypoint:
+      - /bin/sh
+      - -ec
+
+    command: |
+      apk add --no-cache curl tzdata
+
+      cat > /usr/local/bin/trigger-backup <<'EOF'
+      #!/bin/sh
+      echo "[$(date -Is)] Triggering VaultSync backup"
+
+      curl --fail-with-body \
+        --silent \
+        --show-error \
+        --connect-timeout 10 \
+        --max-time 60 \
+        -X POST \
+        -H "Authorization: Bearer $${API_TOKEN}" \
+        http://api:5050/api/v1/jobs/trigger
+
+      echo
+      echo "[$(date -Is)] Trigger request finished"
+      EOF
+
+      chmod 700 /usr/local/bin/trigger-backup
+
+      echo '0 3 * * * /usr/local/bin/trigger-backup >> /proc/1/fd/1 2>&1' \
+        > /etc/crontabs/root
+
+      echo "VaultSync scheduler started - daily at 03:00"
+      exec crond -f -l 8
 # ==========================================
 # NETWORKS
 # ==========================================
