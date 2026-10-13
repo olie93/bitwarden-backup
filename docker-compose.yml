@@ -176,7 +176,6 @@ services:
         # Start cron in foreground
         exec crond -f -l 8
 
-The critical change is using:
 # ==========================================
 # NETWORKS
 # ==========================================
