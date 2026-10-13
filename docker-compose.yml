@@ -59,6 +59,9 @@ services:
       # Backup configuration
       BACKUP_PATH: ${BACKUP_PATH:-bitwarden-backup}
       EXPORT_ORGANIZATIONS: ${EXPORT_ORGANIZATIONS:-false}
+     
+     # Backup notifications
+      APPRISE_URLS: ${APPRISE_URLS:-}
 
       # Security
       API_ALLOW_BACKUP_DECRYPTION: "false"
