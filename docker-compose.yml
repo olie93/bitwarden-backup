@@ -119,8 +119,9 @@ services:
 
     networks:
       - BitWarden-Net
-      
-      
+  # ==========================================
+  # VAULTSYNC BACKUP SCHEDULER
+  # ==========================================
   scheduler:
     image: alpine:3.21
     container_name: bitwarden-backup-scheduler
@@ -137,37 +138,45 @@ services:
     networks:
       - BitWarden-Net
 
-    entrypoint:
-      - /bin/sh
-      - -ec
+    entrypoint: ["/bin/sh", "-ec"]
 
-    command: |
-      apk add --no-cache curl tzdata
+    command:
+      - |
+        # Install curl and timezone data
+        apk add --no-cache curl tzdata
 
-      cat > /usr/local/bin/trigger-backup <<'EOF'
-      #!/bin/sh
-      echo "[$(date -Is)] Triggering VaultSync backup"
+        # Create backup trigger script
+        cat > /usr/local/bin/trigger-backup <<'EOF'
+        #!/bin/sh
+        set -eu
 
-      curl --fail-with-body \
-        --silent \
-        --show-error \
-        --connect-timeout 10 \
-        --max-time 60 \
-        -X POST \
-        -H "Authorization: Bearer $${API_TOKEN}" \
-        http://api:5050/api/v1/jobs/trigger
+        echo "[$(date -Is)] Triggering VaultSync backup"
 
-      echo
-      echo "[$(date -Is)] Trigger request finished"
-      EOF
+        curl --fail-with-body \
+          --silent \
+          --show-error \
+          --connect-timeout 10 \
+          --max-time 60 \
+          -X POST \
+          -H "Authorization: Bearer $${API_TOKEN}" \
+          http://api:5050/api/v1/jobs/trigger
 
-      chmod 700 /usr/local/bin/trigger-backup
+        echo
+        echo "[$(date -Is)] Backup job submitted"
+        EOF
 
-      echo '0 3 * * * /usr/local/bin/trigger-backup >> /proc/1/fd/1 2>&1' \
-        > /etc/crontabs/root
+        chmod 700 /usr/local/bin/trigger-backup
 
-      echo "VaultSync scheduler started - daily at 03:00"
-      exec crond -f -l 8
+        # Schedule daily backup at 03:00
+        echo '0 3 * * * /usr/local/bin/trigger-backup >> /proc/1/fd/1 2>&1' \
+          > /etc/crontabs/root
+
+        echo "VaultSync scheduler running - daily at 03:00"
+
+        # Start cron in foreground
+        exec crond -f -l 8
+
+The critical change is using:
 # ==========================================
 # NETWORKS
 # ==========================================
