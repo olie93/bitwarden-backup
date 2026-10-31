@@ -855,3 +855,28 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 ## License
 
 This project is open source. Please check the license file for details.
+
+## Centralized console logging
+
+The production `docker-compose.yml` forwards the API, UI, Redis and scheduler
+console output to the private collector `172.16.16.3:1514` using Docker's syslog
+driver. Container names become application tags. The non-blocking 1 MiB buffer
+and bounded local cache (two compressed 5 MiB files) preserve recent
+Docker/Portainer log access. UDP forwarding is best effort; the cache is not a
+replay queue. No backup-content files are collected by this change.
+
+The exact options were tested on OKVPWTDCK01 and the test event reached Grafana.
+After committing/pushing, update the existing Portainer Git stack with image
+repulling disabled and retain its current variables and volumes. Logging changes
+recreate the four containers: deploy when no backup job is running, then verify
+the UI and schedule. Development/build Compose variants are unchanged.
+
+Grafana Explore, Last 15 minutes:
+
+```logql
+{job="syslog",host="OKVPWTDCK01",app=~"bitwarden-backup-(api|ui|redis|scheduler)"}
+```
+
+The fleet rollout guide is `VPSDocker/Logging/linux/README.md` in the companion
+VPSDocker repository. The native journal collector is installed separately and
+does not change this stack or Docker's default logging driver.

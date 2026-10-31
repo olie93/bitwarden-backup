@@ -1,3 +1,17 @@
+# Container console logs to the private VPS collector; bounded local cache retained.
+x-application-logging: &application-logging
+  driver: syslog
+  options:
+    syslog-address: "udp://172.16.16.3:1514"
+    syslog-format: "rfc5424micro"
+    tag: "{{.Name}}"
+    mode: non-blocking
+    max-buffer-size: "1m"
+    cache-disabled: "false"
+    cache-max-size: "5m"
+    cache-max-file: "2"
+    cache-compress: "true"
+
 
 services:
 
@@ -7,6 +21,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: bitwarden-backup-redis
+    logging: *application-logging
     restart: unless-stopped
 
     command: redis-server --appendonly yes
@@ -31,6 +46,7 @@ services:
   api:
     image: ghcr.io/olie93/bitwarden-backup-api:latest
     container_name: bitwarden-backup-api
+    logging: *application-logging
     restart: unless-stopped
 
     environment:
@@ -111,6 +127,7 @@ services:
   ui:
     image: ghcr.io/olie93/bitwarden-backup-ui:latest
     container_name: bitwarden-backup-ui
+    logging: *application-logging
     restart: unless-stopped
 
     ports:
@@ -128,6 +145,7 @@ services:
   scheduler:
     image: alpine:3.21
     container_name: bitwarden-backup-scheduler
+    logging: *application-logging
     restart: unless-stopped
 
     environment:
