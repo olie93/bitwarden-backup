@@ -171,7 +171,7 @@ The API setup includes:
    - Provides REST endpoints
 
 2. **redis** - Caching and session storage
-   - Redis 7 Alpine image
+   - Redis 8 Alpine image
    - Persistent data storage
    - Health monitoring
 

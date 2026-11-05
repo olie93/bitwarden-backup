@@ -19,7 +19,7 @@ services:
   # REDIS
   # ==========================================
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: bitwarden-backup-redis
     logging: *application-logging
     restart: unless-stopped
@@ -143,7 +143,7 @@ services:
   # VAULTSYNC BACKUP SCHEDULER
   # ==========================================
   scheduler:
-    image: alpine:3.21
+    image: alpine:3.24
     container_name: bitwarden-backup-scheduler
     logging: *application-logging
     restart: unless-stopped
