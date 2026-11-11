@@ -12,6 +12,7 @@ from typing import Any
 
 from api.cache import get_redis_client
 from api.config import get_stream_token_ttl_seconds
+from api.telemetry import emit_backup_terminal
 
 
 class JobStatus(StrEnum):
@@ -96,13 +97,17 @@ class BackupJobManager:
         if not job:
             return False
 
+        previous_status = job["status"]
         now = datetime.now(UTC).isoformat()
 
         if update.status:
             job["status"] = update.status.value
             if update.status == JobStatus.RUNNING and not job["started_at"]:
                 job["started_at"] = now
-            elif update.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
+            elif (
+                update.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+                and update.status.value != previous_status
+            ):
                 job["completed_at"] = now
 
         if update.progress is not None:
@@ -122,6 +127,12 @@ class BackupJobManager:
             self.JOB_TTL,
             json.dumps(job),
         )
+
+        if (
+            update.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)
+            and job["status"] != previous_status
+        ):
+            emit_backup_terminal(job["status"], job["completed_at"])
 
         return True
 
