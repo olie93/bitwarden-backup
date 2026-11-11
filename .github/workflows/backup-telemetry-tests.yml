@@ -1,0 +1,15 @@
+name: Backup completion telemetry tests
+on:
+  pull_request:
+    paths: ['api/jobs.py', 'api/telemetry.py', 'tests/**', '.github/workflows/backup-telemetry-tests.yml']
+  push:
+    branches: [main]
+    paths: ['api/jobs.py', 'api/telemetry.py', 'tests/**', '.github/workflows/backup-telemetry-tests.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -m unittest discover -s tests -v
