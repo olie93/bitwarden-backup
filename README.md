@@ -1,5 +1,15 @@
 # VaultSync
 
+Backup job terminal transitions emit a minimal JSON lifecycle record to the API
+container's stdout: `vaultsync_backup_terminal`, status (`completed`, `failed` or
+`cancelled`) and UTC completion time. The event is emitted after Redis stores the
+result and contains no vault contents, backup output or credentials. Repeated
+updates to the same terminal state retain its original completion time and do
+not emit another record. External monitoring can use completed events for
+freshness; an API startup message does not mean a backup succeeded.
+
+Run the isolated lifecycle tests with `python -m unittest discover -s tests -v`.
+
 ![VaultSync Logo](./ui/src/full-logo.svg)
 
 **Configure once, forget forever.** Automated Bitwarden vault backups with **multi-remote cloud storage support**. Set up once and enjoy hands-free daily backups to multiple cloud services simultaneously (S3, Google Drive, Dropbox, OneDrive, Cloudflare R2, and 40+ others). **Supports both official Bitwarden and self-hosted servers.**
